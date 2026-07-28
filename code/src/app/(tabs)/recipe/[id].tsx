@@ -1,13 +1,17 @@
-import { useCallback } from 'react';
-import { View, Text, Image, ScrollView, ActivityIndicator, Pressable, StyleSheet, DimensionValue } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { View, Text, Image, ScrollView, ActivityIndicator, Pressable, Modal, StyleSheet, DimensionValue } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecipeDetail } from '@/hooks/useRecipeDetail';
 import { Button } from '@/components/Button';
+import { ReplicationItem } from '@/components/ReplicationItem';
+import { ReplicationForm } from '@/components/ReplicationForm';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/lib/theme';
-import { getRecipeImageUrl } from '@/lib/supabase';
+import { supabase, getRecipeImageUrl, getReplicationImageUrl } from '@/lib/supabase';
+import { Replication, ReplicationReaction } from '@/lib/types';
 import { setEditingRecipeId } from '@/lib/navigationState';
 
 const DIFFICULTIES: Record<string, { label: string; color: string }> = {
@@ -38,8 +42,68 @@ export default function RecipeDetailScreen() {
   const router = useRouter();
   const { getResponsiveValue } = useResponsive();
   const { profile } = useAuth();
-  const { recipe, loading, error } = useRecipeDetail(id);
+  const { recipe, replications, loading, replicationsLoading, error, refetch, refreshReplications } = useRecipeDetail(id);
   const contentMaxWidth: DimensionValue = getResponsiveValue({ mobile: '100%' as DimensionValue, tablet: 600, desktop: 800 });
+  const [showReplicationForm, setShowReplicationForm] = useState(false);
+  const [editingReplication, setEditingReplication] = useState<Replication | undefined>(undefined);
+  const [deletingReplication, setDeletingReplication] = useState<Replication | undefined>(undefined);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [reactionsMap, setReactionsMap] = useState<Record<string, ReplicationReaction[]>>({});
+
+  useEffect(() => {
+    if (replications.length === 0) {
+      setReactionsMap({});
+      return;
+    }
+
+    const repIds = replications.map(r => r.id);
+    supabase
+      .from('replication_reactions')
+      .select('*')
+      .in('replication_id', repIds)
+      .then(({ data }) => {
+        const map: Record<string, ReplicationReaction[]> = {};
+        for (const repId of repIds) map[repId] = [];
+        for (const row of (data || []) as ReplicationReaction[]) {
+          if (!map[row.replication_id]) map[row.replication_id] = [];
+          map[row.replication_id].push(row);
+        }
+        setReactionsMap(map);
+      });
+  }, [replications]);
+
+  const handleReact = useCallback(async (replicationId: string, emoji: string) => {
+    if (!profile) return;
+    const { error } = await supabase
+      .from('replication_reactions')
+      .insert({ replication_id: replicationId, user_id: profile.id, emoji });
+
+    if (!error) {
+      const { data } = await supabase
+        .from('replication_reactions')
+        .select('*')
+        .eq('replication_id', replicationId);
+      setReactionsMap(prev => ({ ...prev, [replicationId]: (data || []) as ReplicationReaction[] }));
+    }
+  }, [profile]);
+
+  const handleRemoveReaction = useCallback(async (replicationId: string, emoji: string) => {
+    if (!profile) return;
+    const { error } = await supabase
+      .from('replication_reactions')
+      .delete()
+      .eq('replication_id', replicationId)
+      .eq('user_id', profile.id)
+      .eq('emoji', emoji);
+
+    if (!error) {
+      const { data } = await supabase
+        .from('replication_reactions')
+        .select('*')
+        .eq('replication_id', replicationId);
+      setReactionsMap(prev => ({ ...prev, [replicationId]: (data || []) as ReplicationReaction[] }));
+    }
+  }, [profile]);
 
   const handleBack = useCallback(() => {
     if (created) {
@@ -48,6 +112,38 @@ export default function RecipeDetailScreen() {
       router.back();
     }
   }, [created, router]);
+
+  const openCreateForm = useCallback(() => {
+    setEditingReplication(undefined);
+    setShowReplicationForm(true);
+  }, []);
+
+  const openEditForm = useCallback((rep: Replication) => {
+    setEditingReplication(rep);
+    setShowReplicationForm(true);
+  }, []);
+
+  const handleReplicationSuccess = useCallback(() => {
+    setShowReplicationForm(false);
+    setEditingReplication(undefined);
+    refetch();
+    refreshReplications();
+  }, [refetch, refreshReplications]);
+
+  const handleDeleteReplication = useCallback(async () => {
+    if (!deletingReplication) return;
+
+    const { error } = await supabase
+      .from('recipe_replications')
+      .delete()
+      .eq('id', deletingReplication.id);
+
+    if (!error) {
+      setDeletingReplication(undefined);
+      refetch();
+      refreshReplications();
+    }
+  }, [deletingReplication, refetch, refreshReplications]);
 
   if (loading) {
     return (
@@ -72,122 +168,197 @@ export default function RecipeDetailScreen() {
   const isOwner = profile?.id === recipe.author_id;
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
-        <View>
-          {recipe.image_url ? (
-            <Image source={{ uri: getRecipeImageUrl(recipe.image_url) ?? '' }} style={styles.heroImage} />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <MaterialIcons name="restaurant" size={64} color={Colors.brownLight} />
-            </View>
-          )}
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <MaterialIcons name="arrow-back" size={24} color={Colors.white} />
-          </Pressable>
-        </View>
-
-        <View style={styles.body}>
-          <Text style={styles.title}>{recipe.title}</Text>
-
-          <View style={styles.authorRow}>
-            {recipe.author?.avatar_url ? (
-              <Image source={{ uri: recipe.author.avatar_url }} style={styles.avatar} />
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
+          <View>
+            {recipe.image_url ? (
+              <Image source={{ uri: getRecipeImageUrl(recipe.image_url) ?? '' }} style={styles.heroImage} />
             ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitials}>{getInitials(authorName)}</Text>
+              <View style={styles.heroPlaceholder}>
+                <MaterialIcons name="restaurant" size={64} color={Colors.brownLight} />
               </View>
             )}
-            <Text style={styles.authorName}>{authorName}</Text>
-            {!recipe.is_public && (
-              <MaterialIcons name="lock" size={16} color={Colors.brownLight} />
-            )}
+            <Pressable style={styles.backButton} onPress={handleBack}>
+              <MaterialIcons name="arrow-back" size={24} color={Colors.white} />
+            </Pressable>
           </View>
 
-          <View style={styles.metaRow}>
-            {diff && (
-              <View style={[styles.metaBadge, { backgroundColor: diff.color + '20' }]}>
-                <Text style={[styles.metaBadgeText, { color: diff.color }]}>{diff.label}</Text>
-              </View>
-            )}
-            {recipe.prep_time_minutes && (
-              <View style={styles.metaBadge}>
-                <MaterialIcons name="timer" size={14} color={Colors.brownMedium} />
-                <Text style={styles.metaBadgeText}>Prep: {formatTime(recipe.prep_time_minutes)}</Text>
-              </View>
-            )}
-            {recipe.cook_time_minutes && (
-              <View style={styles.metaBadge}>
-                <MaterialIcons name="timer-off" size={14} color={Colors.brownMedium} />
-                <Text style={styles.metaBadgeText}>Cocción: {formatTime(recipe.cook_time_minutes)}</Text>
-              </View>
-            )}
-          </View>
+          <View style={styles.body}>
+            <Text style={styles.title}>{recipe.title}</Text>
 
-          {recipe.description && (
-            <Text style={styles.description}>{recipe.description}</Text>
-          )}
+            <View style={styles.authorRow}>
+              {recipe.author?.avatar_url ? (
+                <Image source={{ uri: recipe.author.avatar_url }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitials}>{getInitials(authorName)}</Text>
+                </View>
+              )}
+              <Text style={styles.authorName}>{authorName}</Text>
+              {!recipe.is_public && (
+                <MaterialIcons name="lock" size={16} color={Colors.brownLight} />
+              )}
+            </View>
 
-          {recipe.tags && recipe.tags.length > 0 && (
-            <View style={styles.tagsRow}>
-              {recipe.tags.map(tag => (
-                <View key={tag} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
+            <View style={styles.metaRow}>
+              {diff && (
+                <View style={[styles.metaBadge, { backgroundColor: diff.color + '20' }]}>
+                  <Text style={[styles.metaBadgeText, { color: diff.color }]}>{diff.label}</Text>
+                </View>
+              )}
+              {recipe.prep_time_minutes && (
+                <View style={styles.metaBadge}>
+                  <MaterialIcons name="timer" size={14} color={Colors.brownMedium} />
+                  <Text style={styles.metaBadgeText}>Prep: {formatTime(recipe.prep_time_minutes)}</Text>
+                </View>
+              )}
+              {recipe.cook_time_minutes && (
+                <View style={styles.metaBadge}>
+                  <MaterialIcons name="timer-off" size={14} color={Colors.brownMedium} />
+                  <Text style={styles.metaBadgeText}>Cocción: {formatTime(recipe.cook_time_minutes)}</Text>
+                </View>
+              )}
+              {recipe.avg_rating !== undefined && recipe.avg_rating > 0 && (
+                <View style={styles.metaBadge}>
+                  <MaterialIcons name="star" size={14} color={Colors.warning} />
+                  <Text style={[styles.metaBadgeText, { color: Colors.warning }]}>{recipe.avg_rating.toFixed(1)}</Text>
+                </View>
+              )}
+            </View>
+
+            {recipe.description && (
+              <Text style={styles.description}>{recipe.description}</Text>
+            )}
+
+            {recipe.tags && recipe.tags.length > 0 && (
+              <View style={styles.tagsRow}>
+                {recipe.tags.map(tag => (
+                  <View key={tag} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <Button
+              title="He cocinado esta receta"
+              onPress={openCreateForm}
+            />
+
+            <View style={styles.divider} />
+
+            <Text style={styles.sectionTitle}>Ingredientes</Text>
+            <View style={styles.ingredientsList}>
+              {recipe.ingredients?.map((ing, index) => (
+                <View key={ing.id || index} style={styles.ingredientRow}>
+                  <View style={styles.bullet} />
+                  <Text style={styles.ingredientText}>
+                    {ing.quantity && `${ing.quantity} `}
+                    {ing.unit && `${ing.unit} `}
+                    {ing.name}
+                  </Text>
                 </View>
               ))}
             </View>
-          )}
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>Ingredientes</Text>
-          <View style={styles.ingredientsList}>
-            {recipe.ingredients?.map((ing, index) => (
-              <View key={ing.id || index} style={styles.ingredientRow}>
-                <View style={styles.bullet} />
-                <Text style={styles.ingredientText}>
-                  {ing.quantity && `${ing.quantity} `}
-                  {ing.unit && `${ing.unit} `}
-                  {ing.name}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.sectionTitle}>Pasos</Text>
-          <View style={styles.stepsList}>
-            {recipe.steps?.map((step, index) => (
-              <View key={step.id || index} style={styles.stepRow}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>{index + 1}</Text>
+            <Text style={styles.sectionTitle}>Pasos</Text>
+            <View style={styles.stepsList}>
+              {recipe.steps?.map((step, index) => (
+                <View key={step.id || index} style={styles.stepRow}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>{index + 1}</Text>
+                  </View>
+                  <Text style={styles.stepText}>{step.description}</Text>
                 </View>
-                <Text style={styles.stepText}>{step.description}</Text>
+              ))}
+            </View>
+
+            <View style={styles.divider} />
+
+            <Text style={styles.sectionTitle}>Replicaciones</Text>
+            {replicationsLoading ? (
+              <ActivityIndicator size="small" color={Colors.greenAccent} />
+            ) : replications.length === 0 ? (
+              <Text style={styles.emptyText}>Sé el primero en cocinar esta receta</Text>
+            ) : (
+              <View style={styles.replicationsList}>
+                {replications.map(rep => (
+                  <ReplicationItem
+                    key={rep.id}
+                    replication={rep}
+                    reactions={reactionsMap[rep.id]}
+                    canReact={profile?.id === recipe?.author_id}
+                    currentUserId={profile?.id}
+                    onReact={(emoji) => handleReact(rep.id, emoji)}
+                    onRemoveReaction={(emoji) => handleRemoveReaction(rep.id, emoji)}
+                    onImagePress={(url) => setPreviewImageUrl(getReplicationImageUrl(url) ?? url)}
+                    onEdit={() => openEditForm(rep)}
+                    onDelete={() => setDeletingReplication(rep)}
+                    isOwner={profile?.id === rep.user_id}
+                  />
+                ))}
               </View>
-            ))}
+            )}
+
+            <View style={styles.divider} />
+
+            {isOwner && (
+              <Button
+                title="Editar receta"
+                onPress={() => {
+                  setEditingRecipeId(recipe.id);
+                  router.push('/(tabs)/create' as any);
+                }}
+                variant="secondary"
+              />
+            )}
+
+            <View style={styles.spacer} />
           </View>
+        </View>
+      </ScrollView>
 
-          <View style={styles.divider} />
+      <ReplicationForm
+        visible={showReplicationForm}
+        recipeId={recipe.id}
+        recipeTitle={recipe.title}
+        existingReplication={editingReplication}
+        onClose={() => { setShowReplicationForm(false); setEditingReplication(undefined); }}
+        onSuccess={handleReplicationSuccess}
+      />
 
-          {isOwner && (
-            <Button
-              title="Editar receta"
-              onPress={() => {
-                setEditingRecipeId(recipe.id);
-                router.push('/(tabs)/create' as any);
-              }}
-              variant="secondary"
+      <ConfirmDialog
+        visible={!!deletingReplication}
+        title="Eliminar replicación"
+        message="¿Estás seguro de que quieres eliminar esta replicación?"
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        destructive
+        onConfirm={handleDeleteReplication}
+        onCancel={() => setDeletingReplication(undefined)}
+      />
+
+      <Modal visible={!!previewImageUrl} transparent animationType="fade" onRequestClose={() => setPreviewImageUrl(null)}>
+        <Pressable style={styles.imagePreviewOverlay} onPress={() => setPreviewImageUrl(null)}>
+          {previewImageUrl && (
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.imagePreview}
+              resizeMode="contain"
             />
           )}
-
-          <View style={styles.spacer} />
-        </View>
-      </View>
-    </ScrollView>
+          <Pressable style={styles.imagePreviewClose} onPress={() => setPreviewImageUrl(null)} onStartShouldSetResponder={() => true}>
+            <MaterialIcons name="close" size={28} color={Colors.white} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -375,7 +546,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderCurve: 'continuous',
   },
+  replicationsList: {
+    gap: Spacing.sm,
+  },
+  emptyText: {
+    fontSize: FontSize.body,
+    color: Colors.brownLight,
+    textAlign: 'center',
+    paddingVertical: Spacing.md,
+  },
   spacer: {
     height: Spacing['2xl'],
+  },
+  imagePreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.md,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePreviewClose: {
+    position: 'absolute',
+    top: Spacing.xl,
+    right: Spacing.md,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

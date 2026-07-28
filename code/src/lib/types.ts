@@ -111,3 +111,28 @@ export interface RecipeShare {
   shared_at: string;
   recipe?: Recipe;
 }
+
+export interface Replication {
+  id: string;
+  recipe_id: string;
+  user_id: string;
+  image_url: string | null;
+  comment: string | null;
+  rating: number | null;
+  created_at: string;
+  user?: Profile;
+}
+
+export interface ReplicationInput {
+  image_url?: string | null;
+  comment?: string;
+  rating?: number;
+}
+
+export interface ReplicationReaction {
+  id: string;
+  replication_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+}

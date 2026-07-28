@@ -52,3 +52,9 @@ export function getRecipeImageUrl(imageUrl: string | null): string | null {
   }
   return `${supabaseUrl}/storage/v1/object/public/recipes/${imageUrl}`;
 }
+
+export function getReplicationImageUrl(imageUrl: string | null): string | null {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith(supabaseUrl)) return imageUrl;
+  return `${supabaseUrl}/storage/v1/object/public/replications/${imageUrl}`;
+}

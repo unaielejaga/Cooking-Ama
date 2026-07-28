@@ -78,7 +78,33 @@ export function useRecipes(filters?: RecipeFilters): UseRecipesReturn {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data as Recipe[];
+
+    const recipes = data as Recipe[];
+
+    if (recipes.length > 0) {
+      const recipeIds = recipes.map(r => r.id);
+      const { data: ratingsData } = await supabase
+        .from('recipe_replications')
+        .select('recipe_id, rating')
+        .in('recipe_id', recipeIds)
+        .not('rating', 'is', null);
+
+      if (ratingsData && ratingsData.length > 0) {
+        const grouped: Record<string, number[]> = {};
+        for (const r of ratingsData) {
+          if (!grouped[r.recipe_id]) grouped[r.recipe_id] = [];
+          if (r.rating) grouped[r.recipe_id].push(r.rating);
+        }
+        for (const recipe of recipes) {
+          const ratings = grouped[recipe.id];
+          if (ratings && ratings.length > 0) {
+            recipe.avg_rating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+          }
+        }
+      }
+    }
+
+    return recipes;
   }, [searchText, difficulty, ingredient, maxTime]);
 
   const refresh = useCallback(async () => {
