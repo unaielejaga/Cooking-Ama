@@ -8,6 +8,7 @@ export interface UseRecipeDetailReturn {
   loading: boolean;
   replicationsLoading: boolean;
   error: string | null;
+  sharedGroupNames: string[];
   refetch: () => Promise<void>;
   refreshReplications: () => Promise<void>;
 }
@@ -18,6 +19,7 @@ export function useRecipeDetail(id: string | undefined): UseRecipeDetailReturn {
   const [loading, setLoading] = useState(true);
   const [replicationsLoading, setReplicationsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sharedGroupNames, setSharedGroupNames] = useState<string[]>([]);
 
   const fetchRecipe = useCallback(async () => {
     if (!id) {
@@ -87,6 +89,37 @@ export function useRecipeDetail(id: string | undefined): UseRecipeDetailReturn {
     }
   }, [id]);
 
+  const fetchSharedGroups = useCallback(async () => {
+    if (!id) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user?.id) return;
+
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_id', userData.user.id);
+
+    if (!membership || membership.length === 0) {
+      setSharedGroupNames([]);
+      return;
+    }
+
+    const myGroupIds = membership.map(m => m.group_id);
+
+    const { data: shares } = await supabase
+      .from('recipe_shares')
+      .select('group:groups(name)')
+      .eq('recipe_id', id)
+      .in('group_id', myGroupIds);
+
+    const names = (shares || [])
+      .map(s => (s as any).group?.name)
+      .filter(Boolean) as string[];
+
+    setSharedGroupNames(names);
+  }, [id]);
+
   useEffect(() => {
     fetchRecipe();
   }, [fetchRecipe]);
@@ -95,12 +128,17 @@ export function useRecipeDetail(id: string | undefined): UseRecipeDetailReturn {
     fetchReplications();
   }, [fetchReplications]);
 
+  useEffect(() => {
+    fetchSharedGroups();
+  }, [fetchSharedGroups]);
+
   return {
     recipe,
     replications,
     loading,
     replicationsLoading,
     error,
+    sharedGroupNames,
     refetch: fetchRecipe,
     refreshReplications: fetchReplications,
   };

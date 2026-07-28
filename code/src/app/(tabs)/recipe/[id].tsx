@@ -42,7 +42,7 @@ export default function RecipeDetailScreen() {
   const router = useRouter();
   const { getResponsiveValue } = useResponsive();
   const { profile } = useAuth();
-  const { recipe, replications, loading, replicationsLoading, error, refetch, refreshReplications } = useRecipeDetail(id);
+  const { recipe, replications, loading, replicationsLoading, error, sharedGroupNames, refetch, refreshReplications } = useRecipeDetail(id);
   const contentMaxWidth: DimensionValue = getResponsiveValue({ mobile: '100%' as DimensionValue, tablet: 600, desktop: 800 });
   const [showReplicationForm, setShowReplicationForm] = useState(false);
   const [editingReplication, setEditingReplication] = useState<Replication | undefined>(undefined);
@@ -229,6 +229,15 @@ export default function RecipeDetailScreen() {
                 </View>
               )}
             </View>
+
+            {sharedGroupNames.length > 0 && (
+              <View style={styles.sharedRow}>
+                <MaterialIcons name="group" size={16} color={Colors.greenAccent} />
+                <Text style={styles.sharedText}>
+                  Compartido contigo desde: {sharedGroupNames.join(', ')}
+                </Text>
+              </View>
+            )}
 
             {recipe.description && (
               <Text style={styles.description}>{recipe.description}</Text>
@@ -434,6 +443,21 @@ const styles = StyleSheet.create({
     fontSize: FontSize.body,
     fontWeight: FontWeight.medium,
     color: Colors.brownDark,
+    flex: 1,
+  },
+  sharedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.greenLight,
+    borderRadius: BorderRadius.button,
+  },
+  sharedText: {
+    fontSize: FontSize.caption,
+    color: Colors.greenAccent,
+    fontWeight: FontWeight.medium,
     flex: 1,
   },
   metaRow: {
