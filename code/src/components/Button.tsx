@@ -36,10 +36,11 @@ const styles = StyleSheet.create({
   base: {
     borderRadius: BorderRadius.button,
     borderCurve: 'continuous',
-    paddingVertical: 14,
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 40,
   },
   primary: {
     backgroundColor: Colors.greenAccent,
