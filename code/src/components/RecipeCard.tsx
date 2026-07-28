@@ -8,6 +8,7 @@ interface RecipeCardProps {
   recipe: Recipe;
   onPress: (recipe: Recipe) => void;
   sharedGroupNames?: string[];
+  variant?: 'list' | 'grid';
 }
 
 const DIFFICULTIES: Record<string, { label: string; color: string }> = {
@@ -33,7 +34,8 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function RecipeCard({ recipe, onPress, sharedGroupNames }: RecipeCardProps) {
+export function RecipeCard({ recipe, onPress, sharedGroupNames, variant = 'list' }: RecipeCardProps) {
+  const isGrid = variant === 'grid';
   const diff = recipe.difficulty ? DIFFICULTIES[recipe.difficulty] : null;
   const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
   const timeLabel = formatTime(totalTime || null);
@@ -41,15 +43,19 @@ export function RecipeCard({ recipe, onPress, sharedGroupNames }: RecipeCardProp
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        isGrid ? styles.cardGrid : styles.cardList,
+        pressed && styles.cardPressed,
+      ]}
       onPress={() => onPress(recipe)}
     >
-      <View style={styles.imageContainer}>
+      <View style={isGrid ? styles.imageContainerGrid : styles.imageContainerList}>
         {recipe.image_url ? (
-          <Image source={{ uri: getRecipeImageUrl(recipe.image_url) ?? '' }} style={styles.image} />
+          <Image source={{ uri: getRecipeImageUrl(recipe.image_url) ?? '' }} style={isGrid ? styles.imageGrid : styles.imageList} />
         ) : (
-          <View style={styles.imagePlaceholder}>
-            <MaterialIcons name="restaurant" size={40} color={Colors.brownLight} />
+          <View style={isGrid ? styles.imagePlaceholderGrid : styles.imagePlaceholderList}>
+            <MaterialIcons name="restaurant" size={isGrid ? 28 : 40} color={Colors.brownLight} />
           </View>
         )}
         {!recipe.is_public && (
@@ -59,8 +65,8 @@ export function RecipeCard({ recipe, onPress, sharedGroupNames }: RecipeCardProp
         )}
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
+      <View style={isGrid ? styles.contentGrid : styles.contentList}>
+        <Text style={isGrid ? styles.titleGrid : styles.titleList} numberOfLines={2}>
           {recipe.title}
         </Text>
 
@@ -111,7 +117,6 @@ export function RecipeCard({ recipe, onPress, sharedGroupNames }: RecipeCardProp
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.card,
     borderCurve: 'continuous',
@@ -119,20 +124,42 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
   },
+  cardList: {
+    flexDirection: 'row',
+  },
+  cardGrid: {
+    flex: 1,
+    flexDirection: 'column',
+  },
   cardPressed: {
     opacity: 0.85,
   },
-  imageContainer: {
+  imageContainerList: {
     width: 120,
     position: 'relative',
   },
-  image: {
+  imageContainerGrid: {
+    width: '100%',
+    position: 'relative',
+  },
+  imageList: {
     width: 120,
     height: 140,
   },
-  imagePlaceholder: {
+  imageGrid: {
+    width: '100%',
+    height: 120,
+  },
+  imagePlaceholderList: {
     width: 120,
     height: 140,
+    backgroundColor: Colors.bone,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderGrid: {
+    width: '100%',
+    height: 120,
     backgroundColor: Colors.bone,
     justifyContent: 'center',
     alignItems: 'center',
@@ -148,14 +175,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
+  contentList: {
     flex: 1,
     padding: Spacing.md,
     gap: Spacing.sm,
     justifyContent: 'center',
   },
-  title: {
+  contentGrid: {
+    padding: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  titleList: {
     fontSize: FontSize.h3,
+    fontWeight: FontWeight.semiBold,
+    color: Colors.brownDark,
+  },
+  titleGrid: {
+    fontSize: FontSize.body,
     fontWeight: FontWeight.semiBold,
     color: Colors.brownDark,
   },

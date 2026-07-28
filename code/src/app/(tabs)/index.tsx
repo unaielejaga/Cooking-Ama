@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, DimensionValue, TextInput, Pressable } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -144,13 +144,16 @@ const sliderStyles = StyleSheet.create({
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { getResponsiveValue } = useResponsive();
+  const { getResponsiveValue, width: screenWidth } = useResponsive();
   const [searchText, setSearchText] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty | ''>('');
   const [ingredient, setIngredient] = useState('');
   const [maxTime, setMaxTime] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [sharedGroupMap, setSharedGroupMap] = useState<Record<string, string[]>>({});
+
+  const numColumns = screenWidth >= 900 ? 4 : screenWidth >= 600 ? 3 : 2;
+  const GAP = Spacing.md;
 
   const { recipes, loading, loadingMore, hasMore, refresh, loadMore } = useRecipes({
     searchText,
@@ -195,12 +198,18 @@ export default function HomeScreen() {
     router.push(`/recipe/${recipe.id}` as any);
   }, [router]);
 
+  const columnWrapperStyle = useMemo(() => ({
+    gap: GAP,
+    marginBottom: GAP,
+  }), []);
+
   function renderItem({ item }: { item: Recipe }) {
     return (
       <RecipeCard
         recipe={item}
         onPress={handleRecipePress}
         sharedGroupNames={sharedGroupMap[item.id]}
+        variant="grid"
       />
     );
   }
@@ -303,11 +312,13 @@ export default function HomeScreen() {
         </View>
 
         <FlatList
+          key={numColumns}
           data={recipes}
           renderItem={renderItem}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          numColumns={numColumns}
+          columnWrapperStyle={columnWrapperStyle}
+          contentContainerStyle={[styles.list, { gap: 0 }]}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           onRefresh={refresh}
@@ -434,9 +445,7 @@ const styles = StyleSheet.create({
   list: {
     padding: Spacing.md,
     flexGrow: 1,
-  },
-  separator: {
-    height: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   footer: {
     paddingVertical: Spacing.lg,
