@@ -17,8 +17,9 @@ export default function TabsLayout() {
   const pathname = usePathname();
 
   const isHomeActive = pathname === '/' || pathname === '/(tabs)' || pathname === '/index' || pathname.startsWith('/recipe/');
-  const isGroupsActive = pathname === '/groups' || pathname === '/(tabs)/groups' || pathname.startsWith('/group/');
+  const isSearchActive = pathname === '/search' || pathname === '/(tabs)/search';
   const isCreateActive = pathname === '/create' || pathname === '/(tabs)/create';
+  const isGroupsActive = pathname === '/groups' || pathname === '/(tabs)/groups' || pathname.startsWith('/group/');
 
   function tabColor(active: boolean): ColorValue {
     return active ? Colors.greenAccent : Colors.brownLight;
@@ -57,6 +58,15 @@ export default function TabsLayout() {
           tabBarLabel: () => <TabLabel label="Inicio" color={tabColor(isHomeActive)} />,
           tabBarIcon: ({ size }) => (
             <MaterialIcons name="home" size={size} color={tabColor(isHomeActive)} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          tabBarLabel: () => <TabLabel label="Buscar" color={tabColor(isSearchActive)} />,
+          tabBarIcon: ({ size }) => (
+            <MaterialIcons name="search" size={size} color={tabColor(isSearchActive)} />
           ),
         }}
       />

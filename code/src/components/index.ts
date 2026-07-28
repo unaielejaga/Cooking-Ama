@@ -10,3 +10,7 @@ export { ConfirmDialog } from './ConfirmDialog';
 export { UnitSelect } from './UnitSelect';
 export { GroupCard } from './GroupCard';
 export { UserSelector } from './UserSelector';
+export { SearchBar } from './SearchBar';
+export { FilterPanel } from './FilterPanel';
+export { FilterChips } from './FilterChips';
+export { SearchSuggestions } from './SearchSuggestions';
