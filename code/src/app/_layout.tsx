@@ -1,16 +1,58 @@
 import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import { Platform } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Colors } from '@/lib/theme';
 
+function useNotificationHandler() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    let cleanup: (() => void) | undefined;
+
+    async function setup() {
+      try {
+        const Notifications = await import('expo-notifications');
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+          }),
+        });
+
+        const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+          const data = response.notification.request.content.data;
+          if (data?.recipe_id) {
+            router.push(`/recipe/${data.recipe_id}` as any);
+          } else if (data?.group_id) {
+            router.push(`/group/${data.group_id}` as any);
+          }
+        });
+
+        cleanup = () => responseSubscription.remove();
+      } catch {
+        // expo-notifications not available
+      }
+    }
+
+    setup();
+    return () => cleanup?.();
+  }, [router]);
+}
+
 export default function RootLayout() {
   const { user, loading } = useAuth();
   const { getResponsiveValue } = useResponsive();
   const segments = useSegments();
   const router = useRouter();
+
+  useNotificationHandler();
 
   useEffect(() => {
     if (loading) return;

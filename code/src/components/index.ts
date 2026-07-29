@@ -13,3 +13,5 @@ export { UserSelector } from './UserSelector';
 export { SearchBar } from './SearchBar';
 export { FilterPanel } from './FilterPanel';
 export { SearchSuggestions } from './SearchSuggestions';
+export { NotificationItem } from './NotificationItem';
+export { NotificationBadge } from './NotificationBadge';

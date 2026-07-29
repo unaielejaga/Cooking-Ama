@@ -12,10 +12,12 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useSearch, SearchFilters } from '@/hooks/useSearch';
+import { useNotifications } from '@/hooks/useNotifications';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterPanel } from '@/components/FilterPanel';
 import { SearchSuggestions } from '@/components/SearchSuggestions';
 import { RecipeCard } from '@/components/RecipeCard';
+import { NotificationBadge } from '@/components/NotificationBadge';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '@/lib/theme';
 import { Recipe } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -38,6 +40,7 @@ export default function HomeScreen() {
     addRecentSearch,
     popularTags,
   } = useSearch();
+  const { unreadCount } = useNotifications();
 
   const [showFilters, setShowFilters] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -189,6 +192,13 @@ export default function HomeScreen() {
       <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         <View style={styles.header}>
           <View style={styles.searchRow}>
+              <Pressable
+              style={styles.notifButton}
+              onPress={() => router.push('/notifications' as any)}
+            >
+              <MaterialIcons name="notifications" size={22} color={Colors.brownMedium} />
+              <NotificationBadge count={unreadCount} />
+            </Pressable>
             <SearchBar
               value={filters.query}
               onChangeText={handleSearch}
@@ -271,6 +281,16 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
+  },
+  notifButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.input,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterButton: {
     width: 44,

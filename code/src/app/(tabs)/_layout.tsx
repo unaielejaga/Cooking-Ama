@@ -2,6 +2,7 @@ import { Tabs, usePathname } from 'expo-router';
 import { Text, ColorValue } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Colors, FontSize, BorderRadius } from '@/lib/theme';
 
 function TabLabel({ label, color }: { label: string; color: ColorValue }) {
@@ -13,6 +14,7 @@ function TabLabel({ label, color }: { label: string; color: ColorValue }) {
 }
 
 export default function TabsLayout() {
+  usePushNotifications();
   const { isDesktop } = useResponsive();
   const pathname = usePathname();
 

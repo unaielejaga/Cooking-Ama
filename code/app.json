@@ -34,8 +34,19 @@
         }
       ],
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#4A7C59"
+        }
+      ]
     ],
+    "notification": {
+      "icon": "./assets/images/notification-icon.png",
+      "color": "#4A7C59"
+    },
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
