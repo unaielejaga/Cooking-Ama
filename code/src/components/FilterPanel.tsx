@@ -19,7 +19,6 @@ interface FilterPanelProps {
   onApply: (filters: Partial<SearchFilters>) => void;
   onClear: () => void;
   currentFilters: SearchFilters;
-  popularTags: string[];
 }
 
 const DIFFICULTIES: { label: string; value: 'easy' | 'medium' | 'hard' }[] = [
@@ -51,11 +50,10 @@ export function FilterPanel({
   onApply,
   onClear,
   currentFilters,
-  popularTags,
 }: FilterPanelProps) {
   const [difficulty, setDifficulty] = useState<('easy' | 'medium' | 'hard')[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
-  const [ingredient, setIngredient] = useState('');
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [ingredientInput, setIngredientInput] = useState('');
   const [maxTime, setMaxTime] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SearchFilters['sortBy']>('newest');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
@@ -64,8 +62,8 @@ export function FilterPanel({
   useEffect(() => {
     if (visible) {
       setDifficulty(currentFilters.difficulty);
-      setTags(currentFilters.tags);
-      setIngredient(currentFilters.ingredient);
+      setIngredients(currentFilters.ingredient);
+      setIngredientInput('');
       setMaxTime(currentFilters.maxTime);
       setSortBy(currentFilters.sortBy);
       setOnlyFavorites(currentFilters.onlyFavorites);
@@ -79,17 +77,10 @@ export function FilterPanel({
     );
   };
 
-  const toggleTag = (tag: string) => {
-    setTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  };
-
   const handleApply = () => {
     onApply({
       difficulty,
-      tags,
-      ingredient,
+      ingredient: ingredients,
       maxTime,
       sortBy,
       onlyFavorites,
@@ -100,8 +91,8 @@ export function FilterPanel({
 
   const handleClear = () => {
     setDifficulty([]);
-    setTags([]);
-    setIngredient('');
+    setIngredients([]);
+    setIngredientInput('');
     setMaxTime(null);
     setSortBy('newest');
     setOnlyFavorites(false);
@@ -154,11 +145,6 @@ export function FilterPanel({
                     style={[styles.chip, selected && styles.chipSelected]}
                     onPress={() => toggleDifficulty(d.value)}
                   >
-                    <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-                      {selected && (
-                        <MaterialIcons name="check" size={14} color={Colors.white} />
-                      )}
-                    </View>
                     <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                       {d.label}
                     </Text>
@@ -167,40 +153,46 @@ export function FilterPanel({
               })}
             </View>
 
-            <Text style={styles.sectionTitle}>Tags</Text>
-            <View style={styles.tagsRow}>
-              {popularTags.slice(0, 8).map(tag => {
-                const selected = tags.includes(tag);
-                return (
-                  <Pressable
-                    key={tag}
-                    style={[styles.tagChip, selected && styles.tagChipSelected]}
-                    onPress={() => toggleTag(tag)}
-                  >
-                    <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>
-                      {tag}
-                    </Text>
+            <Text style={styles.sectionTitle}>Ingredientes</Text>
+            <View style={styles.ingredientChips}>
+              {ingredients.map((ing, i) => (
+                <View key={`${ing}-${i}`} style={styles.ingredientChip}>
+                  <Text style={styles.ingredientChipText}>{ing}</Text>
+                  <Pressable onPress={() => setIngredients(prev => prev.filter((_, idx) => idx !== i))} hitSlop={6}>
+                    <MaterialIcons name="close" size={14} color={Colors.greenAccent} />
                   </Pressable>
-                );
-              })}
-              {popularTags.length === 0 && (
-                <Text style={styles.emptyTags}>No hay tags populares</Text>
-              )}
+                </View>
+              ))}
             </View>
-
-            <Text style={styles.sectionTitle}>Ingrediente</Text>
             <View style={styles.ingredientWrapper}>
               <MaterialIcons name="kitchen" size={16} color={Colors.brownLight} />
               <TextInput
                 style={styles.ingredientInput}
-                placeholder="Nombre del ingrediente"
+                placeholder="Añadir ingrediente"
                 placeholderTextColor={Colors.brownLight}
-                value={ingredient}
-                onChangeText={setIngredient}
+                value={ingredientInput}
+                onChangeText={setIngredientInput}
+                onSubmitEditing={() => {
+                  const trimmed = ingredientInput.trim();
+                  if (trimmed && !ingredients.includes(trimmed)) {
+                    setIngredients(prev => [...prev, trimmed]);
+                  }
+                  setIngredientInput('');
+                }}
+                returnKeyType="done"
               />
-              {ingredient ? (
-                <Pressable onPress={() => setIngredient('')} hitSlop={8}>
-                  <MaterialIcons name="close" size={16} color={Colors.brownLight} />
+              {ingredientInput ? (
+                <Pressable
+                  onPress={() => {
+                    const trimmed = ingredientInput.trim();
+                    if (trimmed && !ingredients.includes(trimmed)) {
+                      setIngredients(prev => [...prev, trimmed]);
+                    }
+                    setIngredientInput('');
+                  }}
+                  hitSlop={8}
+                >
+                  <MaterialIcons name="add" size={18} color={Colors.greenAccent} />
                 </Pressable>
               ) : null}
             </View>
@@ -377,48 +369,27 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: Colors.greenAccent,
   },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: Colors.greenAccent,
-    borderColor: Colors.greenAccent,
-  },
-  tagsRow: {
+  ingredientChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  tagChip: {
-    paddingHorizontal: Spacing.md,
+  ingredientChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm + 2,
     paddingVertical: Spacing.xs + 2,
     borderRadius: BorderRadius.tag,
-    backgroundColor: Colors.bone,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tagChipSelected: {
     backgroundColor: Colors.greenLight,
+    borderWidth: 1,
     borderColor: Colors.greenAccent,
   },
-  tagChipText: {
+  ingredientChipText: {
     fontSize: FontSize.small,
     fontWeight: FontWeight.medium,
-    color: Colors.brownMedium,
-  },
-  tagChipTextSelected: {
     color: Colors.greenAccent,
-  },
-  emptyTags: {
-    fontSize: FontSize.caption,
-    color: Colors.brownLight,
-    fontStyle: 'italic',
   },
   ingredientWrapper: {
     flexDirection: 'row',
