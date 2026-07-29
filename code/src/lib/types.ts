@@ -1,5 +1,27 @@
 import { User } from '@supabase/supabase-js';
 
+export type NotificationType = 'replication' | 'comment' | 'rating' | 'group_invite' | 'group_share';
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  data: Record<string, any> | null;
+  read: boolean;
+  created_at: string;
+}
+
+export type PushPlatform = 'android' | 'ios' | 'web';
+
+export interface PushToken {
+  user_id: string;
+  token: string;
+  platform: PushPlatform;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   username: string;
