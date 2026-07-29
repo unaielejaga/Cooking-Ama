@@ -1,181 +1,70 @@
-import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, DimensionValue, TextInput, Pressable } from 'react-native';
+import { useCallback, useState, useMemo, useEffect } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  DimensionValue,
+} from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useRecipes } from '@/hooks/useRecipes';
+import { useSearch, SearchFilters } from '@/hooks/useSearch';
+import { SearchBar } from '@/components/SearchBar';
+import { FilterPanel } from '@/components/FilterPanel';
+import { SearchSuggestions } from '@/components/SearchSuggestions';
 import { RecipeCard } from '@/components/RecipeCard';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '@/lib/theme';
-import { Recipe, Difficulty } from '@/lib/types';
+import { Recipe } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
-
-const DIFFICULTIES: { label: string; value: Difficulty | '' }[] = [
-  { label: 'Todas', value: '' },
-  { label: 'Fácil', value: 'easy' },
-  { label: 'Media', value: 'medium' },
-  { label: 'Difícil', value: 'hard' },
-];
-
-const MAX_TIME = 240;
-
-function formatTimeLabel(minutes: number): string {
-  if (minutes === 0) return 'Cualquier';
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}min` : `${h}h`;
-}
-
-function TimeSlider({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
-  const trackRef = useRef<View>(null);
-  const trackLayout = useRef({ x: 0, width: 0 });
-  const internalValue = value ?? 0;
-  const fraction = internalValue / MAX_TIME;
-
-  const updateValue = useCallback((pageX: number) => {
-    const { x, width } = trackLayout.current;
-    if (width <= 0) return;
-    const clamped = Math.max(0, Math.min(1, (pageX - x) / width));
-    const minutes = Math.round(clamped * MAX_TIME);
-    onChange(minutes === 0 ? null : minutes);
-  }, [onChange]);
-
-  const handleLayout = useCallback(() => {
-    trackRef.current?.measureInWindow((x, _y, width) => {
-      trackLayout.current = { x, width };
-    });
-  }, []);
-
-  return (
-    <View style={sliderStyles.container}>
-      <View style={sliderStyles.header}>
-        <MaterialIcons name="timer" size={16} color={Colors.brownMedium} />
-        <Text style={sliderStyles.label}>
-          Tiempo máximo: {formatTimeLabel(internalValue)}
-        </Text>
-        {value !== null && (
-          <Pressable onPress={() => onChange(null)} hitSlop={8}>
-            <MaterialIcons name="close" size={16} color={Colors.brownLight} />
-          </Pressable>
-        )}
-      </View>
-      <View
-        ref={trackRef}
-        onLayout={handleLayout}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={e => updateValue(e.nativeEvent.pageX)}
-        onResponderMove={e => updateValue(e.nativeEvent.pageX)}
-        style={sliderStyles.track}
-      >
-        <View style={[sliderStyles.fill, { width: `${fraction * 100}%` as DimensionValue }]} />
-        <View
-          style={[
-            sliderStyles.thumb,
-            { left: `${fraction * 100}%` as DimensionValue, marginLeft: -12 },
-          ]}
-        >
-          <View style={sliderStyles.thumbInner} />
-        </View>
-      </View>
-      <Text style={sliderStyles.rangeLabel}>0 — 4h</Text>
-    </View>
-  );
-}
-
-const sliderStyles = StyleSheet.create({
-  container: {
-    paddingTop: Spacing.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.md,
-  },
-  label: {
-    flex: 1,
-    fontSize: FontSize.caption,
-    color: Colors.brownMedium,
-  },
-  track: {
-    height: 6,
-    backgroundColor: Colors.border,
-    borderRadius: 3,
-    justifyContent: 'center',
-    position: 'relative',
-    cursor: 'pointer',
-    marginHorizontal: 8,
-  },
-  fill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    height: 6,
-    backgroundColor: Colors.greenAccent,
-    borderRadius: 3,
-  },
-  thumb: {
-    position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.white,
-    borderWidth: 2,
-    borderColor: Colors.greenAccent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    top: -9,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-  },
-  thumbInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.greenAccent,
-  },
-  rangeLabel: {
-    fontSize: 10,
-    color: Colors.brownLight,
-    textAlign: 'center',
-    paddingTop: Spacing.xs,
-  },
-});
 
 export default function HomeScreen() {
   const router = useRouter();
   const { getResponsiveValue, width: screenWidth } = useResponsive();
-  const [searchText, setSearchText] = useState('');
-  const [difficulty, setDifficulty] = useState<Difficulty | ''>('');
-  const [ingredient, setIngredient] = useState('');
-  const [maxTime, setMaxTime] = useState<number | null>(null);
+  const {
+    results,
+    loading,
+    loadingMore,
+    hasMore,
+    filters,
+    setFilters,
+    clearFilters,
+    hasActiveFilters,
+    refresh,
+    loadMore,
+    recentSearches,
+    addRecentSearch,
+    popularTags,
+  } = useSearch();
+
   const [showFilters, setShowFilters] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [sharedGroupMap, setSharedGroupMap] = useState<Record<string, string[]>>({});
 
   const numColumns = screenWidth >= 900 ? 4 : screenWidth >= 600 ? 3 : 2;
   const GAP = Spacing.md;
-
-  const { recipes, loading, loadingMore, hasMore, refresh, loadMore } = useRecipes({
-    searchText,
-    difficulty: difficulty || null,
-    ingredient: ingredient || undefined,
-    maxTime,
-  });
 
   useFocusEffect(
     useCallback(() => {
       refresh();
     }, [refresh])
   );
-  const contentMaxWidth: DimensionValue = getResponsiveValue({ mobile: '100%' as DimensionValue, tablet: 600, desktop: 800 });
+
+  const contentMaxWidth: DimensionValue = getResponsiveValue({
+    mobile: '100%' as DimensionValue,
+    tablet: 600,
+    desktop: 800,
+  });
 
   useEffect(() => {
-    if (recipes.length === 0) {
+    if (results.length === 0) {
       setSharedGroupMap({});
       return;
     }
 
-    const allIds = recipes.map(r => r.id);
+    const allIds = results.map(r => r.id);
 
     supabase
       .from('recipe_shares')
@@ -192,11 +81,59 @@ export default function HomeScreen() {
         }
         setSharedGroupMap(map);
       });
-  }, [recipes]);
+  }, [results]);
+
+  const handleSearch = useCallback((text: string) => {
+    setFilters({ query: text });
+    if (text.trim()) {
+      addRecentSearch(text);
+    }
+  }, [setFilters, addRecentSearch]);
+
+  const handleClear = useCallback(() => {
+    setFilters({ query: '' });
+    setShowSuggestions(false);
+  }, [setFilters]);
+
+  const handleFilterApply = useCallback((filterChanges: Partial<SearchFilters>) => {
+    setFilters(filterChanges);
+  }, [setFilters]);
+
+  const handleFilterRemove = useCallback(
+    (key: keyof SearchFilters, value?: string) => {
+      if (key === 'query') {
+        setFilters({ query: '' });
+      } else if (key === 'difficulty' && value) {
+        setFilters({
+          difficulty: filters.difficulty.filter(d => d !== value),
+        });
+      } else if (key === 'ingredient' && value) {
+        setFilters({
+          ingredient: filters.ingredient.filter(i => i !== value),
+        });
+      } else if (key === 'maxTime') {
+        setFilters({ maxTime: null });
+      } else if (key === 'onlyFavorites') {
+        setFilters({ onlyFavorites: false });
+      } else if (key === 'onlyMine') {
+        setFilters({ onlyMine: false });
+      }
+    },
+    [filters, setFilters]
+  );
 
   const handleRecipePress = useCallback((recipe: Recipe) => {
     router.push(`/recipe/${recipe.id}` as any);
   }, [router]);
+
+  const handleSuggestionSelect = useCallback(
+    (suggestion: string) => {
+      setFilters({ query: suggestion });
+      addRecentSearch(suggestion);
+      setShowSuggestions(false);
+    },
+    [setFilters, addRecentSearch]
+  );
 
   const columnWrapperStyle = useMemo(() => ({
     gap: GAP,
@@ -225,14 +162,23 @@ export default function HomeScreen() {
 
   function renderEmpty() {
     if (loading) return null;
+    if (!hasActiveFilters && results.length === 0) {
+      return (
+        <View style={styles.empty}>
+          <MaterialIcons name="search" size={64} color={Colors.brownLight} />
+          <Text style={styles.emptyTitle}>Busca recetas</Text>
+          <Text style={styles.emptySubtitle}>
+            Encuentra recetas por título, ingredientes,{'\n'}tags y más
+          </Text>
+        </View>
+      );
+    }
     return (
       <View style={styles.empty}>
         <MaterialIcons name="search-off" size={64} color={Colors.brownLight} />
-        <Text style={styles.emptyTitle}>
-          {searchText || difficulty || ingredient || maxTime !== null ? 'Sin resultados' : 'No hay recetas aún'}
-        </Text>
+        <Text style={styles.emptyTitle}>Sin resultados</Text>
         <Text style={styles.emptySubtitle}>
-          {searchText || difficulty || ingredient || maxTime !== null ? 'Prueba con otros filtros' : 'Crea la primera receta para comenzar'}
+          Prueba con otros filtros o términos de búsqueda
         </Text>
       </View>
     );
@@ -241,84 +187,49 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
-        <View style={styles.searchContainer}>
+        <View style={styles.header}>
           <View style={styles.searchRow}>
-            <View style={styles.searchInputWrapper}>
-              <MaterialIcons name="search" size={20} color={Colors.brownLight} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Buscar recetas..."
-                placeholderTextColor={Colors.brownLight}
-                value={searchText}
-                onChangeText={setSearchText}
-                returnKeyType="search"
-              />
-              {searchText ? (
-                <Pressable onPress={() => setSearchText('')}>
-                  <MaterialIcons name="close" size={18} color={Colors.brownLight} />
-                </Pressable>
-              ) : null}
-            </View>
+            <SearchBar
+              value={filters.query}
+              onChangeText={handleSearch}
+              onClear={handleClear}
+              onSubmitEditing={() => setShowSuggestions(false)}
+            />
             <Pressable
-              style={[styles.filterButton, showFilters && styles.filterButtonActive]}
-              onPress={() => setShowFilters(v => !v)}
+              style={[
+                styles.filterButton,
+                hasActiveFilters && styles.filterButtonActive,
+              ]}
+              onPress={() => setShowFilters(true)}
             >
               <MaterialIcons
                 name="tune"
                 size={20}
-                color={showFilters ? Colors.white : Colors.brownMedium}
+                color={hasActiveFilters ? Colors.white : Colors.brownMedium}
               />
             </Pressable>
           </View>
 
-          {showFilters && (
-            <View>
-              <View style={styles.filterChips}>
-                {DIFFICULTIES.map(d => {
-                  const selected = difficulty === d.value;
-                  return (
-                    <Pressable
-                      key={d.value}
-                      style={[styles.chip, selected && styles.chipSelected]}
-                      onPress={() => setDifficulty(d.value as Difficulty | '')}
-                    >
-                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                        {d.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <View style={styles.filterInputsRow}>
-                <View style={styles.filterInputWrapper}>
-                  <MaterialIcons name="kitchen" size={16} color={Colors.brownLight} />
-                  <TextInput
-                    style={styles.filterInput}
-                    placeholder="Ingrediente"
-                    placeholderTextColor={Colors.brownLight}
-                    value={ingredient}
-                    onChangeText={setIngredient}
-                  />
-                  {ingredient ? (
-                    <Pressable onPress={() => setIngredient('')}>
-                      <MaterialIcons name="close" size={16} color={Colors.brownLight} />
-                    </Pressable>
-                  ) : null}
-                </View>
-              </View>
-              <TimeSlider value={maxTime} onChange={setMaxTime} />
-            </View>
-          )}
+          <SearchSuggestions
+            suggestions={recentSearches}
+            popularTags={popularTags}
+            onSelect={handleSuggestionSelect}
+            visible={
+              showSuggestions &&
+              !filters.query &&
+              (recentSearches.length > 0 || popularTags.length > 0)
+            }
+          />
         </View>
 
         <FlatList
           key={numColumns}
-          data={recipes}
+          data={results}
           renderItem={renderItem}
           keyExtractor={item => item.id}
           numColumns={numColumns}
           columnWrapperStyle={columnWrapperStyle}
-          contentContainerStyle={[styles.list, { gap: 0 }]}
+          contentContainerStyle={styles.list}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           onRefresh={refresh}
@@ -327,6 +238,15 @@ export default function HomeScreen() {
           onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={() => setShowSuggestions(false)}
+        />
+
+        <FilterPanel
+          visible={showFilters}
+          onClose={() => setShowFilters(false)}
+          onApply={handleFilterApply}
+          onClear={clearFilters}
+          currentFilters={filters}
         />
       </View>
     </View>
@@ -343,40 +263,14 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.cream,
-  },
-  searchContainer: {
+  header: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
     backgroundColor: Colors.cream,
   },
   searchRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-  },
-  searchInputWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.input,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.sm,
-    gap: Spacing.sm,
-    height: 44,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: FontSize.body,
-    color: Colors.brownDark,
-    padding: 0,
-    height: 44,
   },
   filterButton: {
     width: 44,
@@ -392,56 +286,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.greenAccent,
     borderColor: Colors.greenAccent,
   },
-  filterChips: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingTop: Spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.tag,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  chipSelected: {
-    backgroundColor: Colors.greenLight,
-    borderColor: Colors.greenAccent,
-  },
-  chipText: {
-    fontSize: FontSize.small,
-    fontWeight: FontWeight.medium,
-    color: Colors.brownMedium,
-  },
-  chipTextSelected: {
-    color: Colors.greenAccent,
-  },
-  filterInputsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingTop: Spacing.sm,
-  },
-  filterInputWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.input,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.sm,
-    gap: Spacing.xs,
-    height: 40,
-  },
-  filterInput: {
-    flex: 1,
-    fontSize: FontSize.caption,
-    color: Colors.brownDark,
-    padding: 0,
-    height: 40,
-  },
-
   list: {
     padding: Spacing.md,
     flexGrow: 1,
