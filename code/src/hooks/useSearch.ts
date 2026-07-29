@@ -7,7 +7,7 @@ const PAGE_SIZE = 10;
 export interface SearchFilters {
   query: string;
   tags: string[];
-  ingredient: string;
+  ingredient: string[];
   difficulty: ('easy' | 'medium' | 'hard')[];
   maxTime: number | null;
   onlyFavorites: boolean;
@@ -18,7 +18,7 @@ export interface SearchFilters {
 const DEFAULT_FILTERS: SearchFilters = {
   query: '',
   tags: [],
-  ingredient: '',
+  ingredient: [],
   difficulty: [],
   maxTime: null,
   onlyFavorites: false,
@@ -65,7 +65,7 @@ export function useSearch(): UseSearchReturn {
   const hasActiveFilters =
     filters.query !== '' ||
     filters.tags.length > 0 ||
-    filters.ingredient !== '' ||
+    filters.ingredient.length > 0 ||
     filters.difficulty.length > 0 ||
     filters.maxTime !== null ||
     filters.onlyFavorites ||
@@ -123,13 +123,24 @@ export function useSearch(): UseSearchReturn {
 
     let ids: string[] | undefined;
 
-    if (ingredient) {
-      const { data, error } = await supabase
-        .rpc('search_recipe_ids_by_ingredient', { search_name: ingredient });
-      if (error) return [];
-      const resultIds = (data ?? []).map((r: { recipe_id: string }) => r.recipe_id);
-      if (resultIds.length === 0) return [];
-      ids = resultIds;
+    if (ingredient.length > 0) {
+      const allResults = await Promise.all(
+        ingredient.map(ing =>
+          supabase
+            .rpc('search_recipe_ids_by_ingredient', { search_name: ing })
+            .then(({ data, error }) => {
+              if (error) return [] as string[];
+              return (data ?? []).map((r: { recipe_id: string }) => r.recipe_id);
+            })
+        )
+      );
+      for (const resultIds of allResults) {
+        if (resultIds.length === 0) return [];
+      }
+      ids = allResults.reduce<string[] | null>((acc, resultIds) =>
+        acc === null ? resultIds : acc.filter(id => resultIds.includes(id))
+      , null) ?? undefined;
+      if (!ids || ids.length === 0) return [];
     }
 
     if (onlyFavorites) {
