@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "code",
-    "slug": "code",
+    "name": "Cooking Ama",
+    "slug": "cooking-ama",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "code",
+    "scheme": "cookingama",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -20,8 +20,9 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./public/icons/favicon.ico"
     },
     "plugins": [
       "expo-router",
