@@ -1,7 +1,7 @@
 # ============================================
 # Stage 1: Build de la app Expo Web
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ ARG EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL
 ENV EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-RUN npx expo export -p web
+RUN npm run build:web
 
 # ============================================
 # Stage 2: Servir con nginx (producción)
@@ -33,7 +33,7 @@ CMD ["nginx", "-g", "daemon off;"]
 # ============================================
 # Stage 3: Desarrollo (hot reload)
 # ============================================
-FROM node:20-alpine AS development
+FROM node:22-alpine AS development
 
 WORKDIR /app
 

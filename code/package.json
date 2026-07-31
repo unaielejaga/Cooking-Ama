@@ -46,8 +46,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "export:web": "expo export -p web",
-    "build:sw": "workbox-cli generateSW workbox-config.js",
-    "build:web": "expo export -p web && workbox-cli generateSW workbox-config.js"
+    "build:sw": "workbox generateSW workbox-config.js",
+    "build:web": "expo export -p web && workbox generateSW workbox-config.js"
   },
   "private": true
 }

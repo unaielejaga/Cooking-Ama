@@ -17,6 +17,13 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <style>{`input:focus, input:focus-visible, textarea:focus, textarea:focus-visible { outline: none !important; box-shadow: none !important; }`}</style>
         <ScrollViewStyleReset />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+              navigator.serviceWorker.register('/sw.js').catch(function () {});
+            });
+          }
+        ` }} />
       </head>
       <body>{children}</body>
     </html>
