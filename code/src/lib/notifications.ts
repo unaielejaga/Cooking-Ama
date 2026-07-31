@@ -33,10 +33,8 @@ export function getNotificationDeepLink(data: Record<string, any> | null): strin
 export async function registerPushToken(userId: string): Promise<string | null> {
   try {
     if (Platform.OS === 'web') {
-      if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) {
-        console.warn('[push] Push API not available in this browser');
-        return null;
-      }
+      console.warn('[push] Push notifications are not supported on web');
+      return null;
     }
 
     const { getExpoPushTokenAsync, requestPermissionsAsync } = await import('expo-notifications');
@@ -70,6 +68,8 @@ export async function registerPushToken(userId: string): Promise<string | null> 
 }
 
 export async function unregisterPushToken(userId: string): Promise<void> {
+  if (Platform.OS === 'web') return;
+
   try {
     const { getExpoPushTokenAsync } = await import('expo-notifications');
 
