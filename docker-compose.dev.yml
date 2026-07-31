@@ -3,14 +3,14 @@ version: '3.8'
 services:
   cooking-ama:
     build:
-      context: .
-      dockerfile: code/Dockerfile
+      context: ./code
+      dockerfile: Dockerfile
       target: development
     ports:
       - "3000:80"
       - "8081:8081"
     volumes:
-      - .:/app
+      - ./code:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development
