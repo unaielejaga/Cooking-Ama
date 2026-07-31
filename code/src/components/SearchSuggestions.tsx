@@ -67,10 +67,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     padding: Spacing.md,
     gap: Spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
     elevation: 4,
   },
   section: {

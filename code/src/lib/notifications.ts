@@ -33,7 +33,6 @@ export function getNotificationDeepLink(data: Record<string, any> | null): strin
 export async function registerPushToken(userId: string): Promise<string | null> {
   try {
     if (Platform.OS === 'web') {
-      console.warn('[push] Push notifications are not supported on web');
       return null;
     }
 
