@@ -38,7 +38,7 @@ export default function CreateRecipeScreen() {
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [allTags, setAllTags] = useState<string[]>([]);
@@ -47,6 +47,7 @@ export default function CreateRecipeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPublicConfirm, setShowPublicConfirm] = useState(false);
 
   const tagInputRef = useRef<TextInput>(null);
 
@@ -59,10 +60,11 @@ export default function CreateRecipeScreen() {
     setDifficulty(null);
     setPrepTime('');
     setCookTime('');
-    setIsPublic(true);
+    setIsPublic(false);
     setTags([]);
     setTagInput('');
     setShowTagSuggestions(false);
+    setShowPublicConfirm(false);
     setError(null);
     setSaving(false);
   }
@@ -358,7 +360,11 @@ export default function CreateRecipeScreen() {
               styles.visibilityOption,
               isPublic && styles.visibilitySelected,
             ]}
-            onPress={() => setIsPublic(true)}
+            onPress={() => {
+              if (!isPublic) {
+                setShowPublicConfirm(true);
+              }
+            }}
           >
             <MaterialIcons
               name="public"
@@ -413,6 +419,19 @@ export default function CreateRecipeScreen() {
           />
         )}
       </View>
+
+      <ConfirmDialog
+        visible={showPublicConfirm}
+        title="Hacer pública"
+        message="Esta receta la va a poder ver todo el mundo. ¿Continuar?"
+        confirmLabel="Sí, hacer pública"
+        cancelLabel="Cancelar"
+        onConfirm={() => {
+          setShowPublicConfirm(false);
+          setIsPublic(true);
+        }}
+        onCancel={() => setShowPublicConfirm(false)}
+      />
 
       <ConfirmDialog
         visible={showDeleteConfirm}
