@@ -300,6 +300,7 @@ export default function GroupDetailScreen() {
     promoteMember,
     shareRecipe,
     unshareRecipe,
+    deleteGroup,
     refresh,
   } = useGroupDetail(id);
 
@@ -308,6 +309,7 @@ export default function GroupDetailScreen() {
   const [showShare, setShowShare] = useState(false);
   const [removingMember, setRemovingMember] = useState<GroupMember | null>(null);
   const [removingRecipe, setRemovingRecipe] = useState<Recipe | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const contentMaxWidth: DimensionValue = getResponsiveValue({
     mobile: '100%' as DimensionValue,
@@ -330,6 +332,13 @@ export default function GroupDetailScreen() {
     await unshareRecipe(removingRecipe.id);
     setRemovingRecipe(null);
   }, [removingRecipe, unshareRecipe]);
+
+  const handleDeleteGroup = useCallback(async () => {
+    const result = await deleteGroup();
+    if (result.error) return;
+    setConfirmingDelete(false);
+    router.replace('/(tabs)/groups');
+  }, [deleteGroup, router]);
 
   if (loading) {
     return (
@@ -357,6 +366,16 @@ export default function GroupDetailScreen() {
         <Pressable style={styles.backButton} onPress={() => router.push('/(tabs)/groups')}>
           <MaterialIcons name="arrow-back" size={24} color={Colors.brownDark} />
         </Pressable>
+
+        {isAdmin && (
+          <Pressable
+            style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+            onPress={() => setConfirmingDelete(true)}
+            hitSlop={8}
+          >
+            <MaterialIcons name="delete-outline" size={22} color={Colors.error} />
+          </Pressable>
+        )}
 
         <View style={styles.header}>
           <View style={styles.headerIcon}>
@@ -527,6 +546,17 @@ export default function GroupDetailScreen() {
         onConfirm={handleRemoveRecipe}
         onCancel={() => setRemovingRecipe(null)}
       />
+
+      <ConfirmDialog
+        visible={confirmingDelete}
+        title="Eliminar grupo"
+        message={`¿Estás seguro de que quieres eliminar "${group.name}"? Esta acción no se puede deshacer y eliminará también a todos sus miembros y recetas compartidas.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        destructive
+        onConfirm={handleDeleteGroup}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </View>
   );
 }
@@ -565,6 +595,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FDF1EF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  pressed: {
+    opacity: 0.8,
   },
   header: {
     alignItems: 'center',

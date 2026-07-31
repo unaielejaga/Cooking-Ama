@@ -12,6 +12,7 @@ export interface UseGroupDetailReturn {
   promoteMember: (userId: string) => Promise<{ error?: string }>;
   shareRecipe: (recipeId: string) => Promise<{ error?: string }>;
   unshareRecipe: (recipeId: string) => Promise<{ error?: string }>;
+  deleteGroup: () => Promise<{ error?: string }>;
   refresh: () => Promise<void>;
 }
 
@@ -170,6 +171,22 @@ export function useGroupDetail(groupId: string | undefined): UseGroupDetailRetur
     }
   }, [groupId, fetchDetail]);
 
+  const deleteGroup = useCallback(async (): Promise<{ error?: string }> => {
+    if (!groupId) return { error: 'Grupo no especificado' };
+
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', groupId);
+
+      if (error) return { error: error.message };
+      return {};
+    } catch {
+      return { error: 'Error inesperado al eliminar el grupo' };
+    }
+  }, [groupId]);
+
   return {
     group,
     members,
@@ -180,6 +197,7 @@ export function useGroupDetail(groupId: string | undefined): UseGroupDetailRetur
     promoteMember,
     shareRecipe,
     unshareRecipe,
+    deleteGroup,
     refresh: fetchDetail,
   };
 }

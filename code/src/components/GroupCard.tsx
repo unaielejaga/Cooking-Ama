@@ -6,14 +6,16 @@ import { GroupWithDetails } from '@/lib/types';
 interface GroupCardProps {
   group: GroupWithDetails;
   onPress: (group: GroupWithDetails) => void;
+  onDelete?: (group: GroupWithDetails) => void;
 }
 
-export function GroupCard({ group, onPress }: GroupCardProps) {
+export function GroupCard({ group, onPress, onDelete }: GroupCardProps) {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={() => onPress(group)}
-    >
+    <View style={styles.card}>
+      <Pressable
+        style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
+        onPress={() => onPress(group)}
+      >
       <View style={styles.iconContainer}>
         <MaterialIcons name="group" size={32} color={Colors.greenAccent} />
       </View>
@@ -53,7 +55,17 @@ export function GroupCard({ group, onPress }: GroupCardProps) {
       </View>
 
       <MaterialIcons name="chevron-right" size={24} color={Colors.brownLight} />
-    </Pressable>
+      </Pressable>
+      {group.is_admin && onDelete && (
+        <Pressable
+          style={({ pressed }) => [styles.deleteButton, pressed && styles.cardPressed]}
+          onPress={() => onDelete(group)}
+          hitSlop={8}
+        >
+          <MaterialIcons name="delete-outline" size={22} color={Colors.error} />
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -68,6 +80,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     padding: Spacing.md,
     gap: Spacing.md,
+  },
+  cardPressable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FDF1EF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardPressed: {
     opacity: 0.85,

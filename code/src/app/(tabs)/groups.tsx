@@ -96,7 +96,7 @@ export default function GroupsScreen() {
 
   function renderItem({ item }: { item: GroupWithDetails }) {
     return (
-      <GroupCard group={item} onPress={handleGroupPress} />
+      <GroupCard group={item} onPress={handleGroupPress} onDelete={setDeletingGroup} />
     );
   }
 
