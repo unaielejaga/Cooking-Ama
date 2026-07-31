@@ -46,7 +46,6 @@ export function IngredientInput({ ingredients, onChange }: IngredientInputProps)
             onChangeText={v => updateIngredient(ingredient.id, 'quantity', v)}
             placeholder="Cant."
             placeholderTextColor={Colors.brownLight}
-            keyboardType="decimal-pad"
           />
           <UnitSelect
             value={ingredient.unit}
