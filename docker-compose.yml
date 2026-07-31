@@ -4,7 +4,7 @@ services:
 
   # Cooking Ama PWA (Expo Web + nginx)
   cooking-ama:
-    image: cooking-ama:v1.0
+    image: cooking-ama:v1.1
     container_name: cooking-ama
     restart: unless-stopped
     ports:
