@@ -13,6 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useSearch, SearchFilters } from '@/hooks/useSearch';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useFavorites } from '@/hooks/useFavorites';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterPanel } from '@/components/FilterPanel';
 import { SearchSuggestions } from '@/components/SearchSuggestions';
@@ -41,6 +42,7 @@ export default function HomeScreen() {
     popularTags,
   } = useSearch();
   const { unreadCount } = useNotifications();
+  const { isFavorited, toggleFavorite } = useFavorites();
 
   const [showFilters, setShowFilters] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -150,6 +152,8 @@ export default function HomeScreen() {
         onPress={handleRecipePress}
         sharedGroupNames={sharedGroupMap[item.id]}
         variant="grid"
+        isFavorited={isFavorited(item.id)}
+        onToggleFavorite={toggleFavorite}
       />
     );
   }

@@ -15,3 +15,6 @@ export { FilterPanel } from './FilterPanel';
 export { SearchSuggestions } from './SearchSuggestions';
 export { NotificationItem } from './NotificationItem';
 export { NotificationBadge } from './NotificationBadge';
+export { FavoriteButton } from './FavoriteButton';
+export { CollectionCard } from './CollectionCard';
+export { CollectionSelector } from './CollectionSelector';

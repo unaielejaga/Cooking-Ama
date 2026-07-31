@@ -5,7 +5,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecipeDetail } from '@/hooks/useRecipeDetail';
+import { useFavorites } from '@/hooks/useFavorites';
 import { Button } from '@/components/Button';
+import { FavoriteButton } from '@/components/FavoriteButton';
+import { CollectionSelector } from '@/components/CollectionSelector';
 import { ReplicationItem } from '@/components/ReplicationItem';
 import { ReplicationForm } from '@/components/ReplicationForm';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -43,12 +46,14 @@ export default function RecipeDetailScreen() {
   const { getResponsiveValue } = useResponsive();
   const { profile } = useAuth();
   const { recipe, replications, loading, replicationsLoading, error, sharedGroupNames, refetch, refreshReplications } = useRecipeDetail(id);
+  const { isFavorited, toggleFavorite } = useFavorites();
   const contentMaxWidth: DimensionValue = getResponsiveValue({ mobile: '100%' as DimensionValue, tablet: 600, desktop: 800 });
   const [showReplicationForm, setShowReplicationForm] = useState(false);
   const [editingReplication, setEditingReplication] = useState<Replication | undefined>(undefined);
   const [deletingReplication, setDeletingReplication] = useState<Replication | undefined>(undefined);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [reactionsMap, setReactionsMap] = useState<Record<string, ReplicationReaction[]>>({});
+  const [showCollectionSelector, setShowCollectionSelector] = useState(false);
 
   useEffect(() => {
     if (replications.length === 0) {
@@ -185,6 +190,12 @@ export default function RecipeDetailScreen() {
             <Pressable style={styles.backButton} onPress={handleBack}>
               <MaterialIcons name="arrow-back" size={24} color={Colors.white} />
             </Pressable>
+            <FavoriteButton
+              recipeId={recipe.id}
+              isFavorited={isFavorited(recipe.id)}
+              onToggle={toggleFavorite}
+              style={styles.favoriteButton}
+            />
           </View>
 
           <View style={styles.body}>
@@ -256,6 +267,12 @@ export default function RecipeDetailScreen() {
             <Button
               title="He cocinado esta receta"
               onPress={openCreateForm}
+            />
+
+            <Button
+              title="Agregar a colección"
+              onPress={() => setShowCollectionSelector(true)}
+              variant="secondary"
             />
 
             <View style={styles.divider} />
@@ -340,6 +357,13 @@ export default function RecipeDetailScreen() {
         existingReplication={editingReplication}
         onClose={() => { setShowReplicationForm(false); setEditingReplication(undefined); }}
         onSuccess={handleReplicationSuccess}
+      />
+
+      <CollectionSelector
+        visible={showCollectionSelector}
+        recipeId={recipe.id}
+        onClose={() => setShowCollectionSelector(false)}
+        onSuccess={refetch}
       />
 
       <ConfirmDialog
@@ -569,6 +593,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderCurve: 'continuous',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
   },
   replicationsList: {
     gap: Spacing.sm,

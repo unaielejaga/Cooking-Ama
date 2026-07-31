@@ -1,11 +1,26 @@
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { Platform } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Colors } from '@/lib/theme';
+
+function useWebInputStyles() {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const style = document.createElement('style');
+    style.textContent =
+      'input:focus, input:focus-visible, textarea:focus, textarea:focus-visible { outline: none !important; box-shadow: none !important; }';
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+}
 
 function useNotificationHandler() {
   const router = useRouter();
@@ -53,6 +68,7 @@ export default function RootLayout() {
   const router = useRouter();
 
   useNotificationHandler();
+  useWebInputStyles();
 
   useEffect(() => {
     if (loading) return;
@@ -75,7 +91,22 @@ export default function RootLayout() {
     );
   }
 
-  return <Slot />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: Colors.cream },
+      }}
+    >
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="notifications" />
+      <Stack.Screen name="favorites" />
+      <Stack.Screen name="collections/[id]" />
+      <Stack.Screen name="recipe/[id]" />
+      <Stack.Screen name="group/[id]" />
+    </Stack>
+  );
 }
 
 const styles = StyleSheet.create({

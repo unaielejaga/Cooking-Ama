@@ -21,6 +21,7 @@ export default function TabsLayout() {
   const isHomeActive = pathname === '/' || pathname === '/(tabs)' || pathname === '/index' || pathname.startsWith('/recipe/');
   const isCreateActive = pathname === '/create' || pathname === '/(tabs)/create';
   const isGroupsActive = pathname === '/groups' || pathname === '/(tabs)/groups' || pathname.startsWith('/group/');
+  const isProfileActive = pathname === '/profile' || pathname === '/(tabs)/profile' || pathname.startsWith('/favorites') || pathname.startsWith('/collections');
 
   function tabColor(active: boolean): ColorValue {
     return active ? Colors.greenAccent : Colors.brownLight;
@@ -81,12 +82,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="recipe/[id]"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="group/[id]"
-        options={{ href: null }}
+        name="profile"
+        options={{
+          tabBarLabel: () => <TabLabel label="Perfil" color={tabColor(isProfileActive)} />,
+          tabBarIcon: ({ size }) => (
+            <MaterialIcons name="person-outline" size={size} color={tabColor(isProfileActive)} />
+          ),
+        }}
       />
     </Tabs>
   );

@@ -15,6 +15,7 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/icons/favicon.ico" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <style>{`input:focus, input:focus-visible, textarea:focus, textarea:focus-visible { outline: none !important; box-shadow: none !important; }`}</style>
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>

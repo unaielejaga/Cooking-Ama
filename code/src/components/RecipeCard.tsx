@@ -3,12 +3,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/lib/theme';
 import { getRecipeImageUrl } from '@/lib/supabase';
 import { Recipe } from '@/lib/types';
+import { FavoriteButton } from '@/components/FavoriteButton';
 
 interface RecipeCardProps {
   recipe: Recipe;
   onPress: (recipe: Recipe) => void;
   sharedGroupNames?: string[];
   variant?: 'list' | 'grid';
+  isFavorited?: boolean;
+  onToggleFavorite?: (recipeId: string) => void;
 }
 
 const DIFFICULTIES: Record<string, { label: string; color: string }> = {
@@ -34,7 +37,7 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function RecipeCard({ recipe, onPress, sharedGroupNames, variant = 'list' }: RecipeCardProps) {
+export function RecipeCard({ recipe, onPress, sharedGroupNames, variant = 'list', isFavorited, onToggleFavorite }: RecipeCardProps) {
   const isGrid = variant === 'grid';
   const diff = recipe.difficulty ? DIFFICULTIES[recipe.difficulty] : null;
   const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
@@ -62,6 +65,15 @@ export function RecipeCard({ recipe, onPress, sharedGroupNames, variant = 'list'
           <View style={styles.privateBadge}>
             <MaterialIcons name="lock" size={12} color={Colors.white} />
           </View>
+        )}
+        {onToggleFavorite && (
+          <FavoriteButton
+            recipeId={recipe.id}
+            isFavorited={!!isFavorited}
+            onToggle={onToggleFavorite}
+            size={isGrid ? 28 : 32}
+            style={styles.favoriteButton}
+          />
         )}
       </View>
 
@@ -167,13 +179,18 @@ const styles = StyleSheet.create({
   privateBadge: {
     position: 'absolute',
     top: Spacing.xs,
-    right: Spacing.xs,
+    left: Spacing.xs,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 10,
     width: 22,
     height: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: Spacing.xs,
+    right: Spacing.xs,
   },
   contentList: {
     flex: 1,
