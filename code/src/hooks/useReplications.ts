@@ -78,6 +78,6 @@ export async function createReplication(
     if (error) return { error: error.message };
     return {};
   } catch {
-    return { error: 'Error inesperado al crear la replicación' };
+    return { error: 'Error inesperado al crear la creación' };
   }
 }

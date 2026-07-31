@@ -127,7 +127,7 @@ export function ReplicationForm({ visible, recipeId, recipeTitle, existingReplic
       setRating(0);
       onSuccess();
     } catch {
-      setError('Error inesperado al crear la replicación');
+      setError('Error inesperado al crear la creación');
     } finally {
       setUploading(false);
     }
@@ -139,7 +139,7 @@ export function ReplicationForm({ visible, recipeId, recipeTitle, existingReplic
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View onStartShouldSetResponder={() => true} style={styles.modal}>
           <ScrollView bounces={false}>
-            <Text style={styles.title}>{isEditing ? 'Editar replicación' : 'He cocinado esta receta'}</Text>
+            <Text style={styles.title}>{isEditing ? 'Editar creación' : 'He cocinado esta receta'}</Text>
             <Text style={styles.subtitle} numberOfLines={2}>{recipeTitle}</Text>
 
             {error && <ErrorAlert message={error} />}

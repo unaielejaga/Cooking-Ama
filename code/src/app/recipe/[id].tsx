@@ -307,7 +307,7 @@ export default function RecipeDetailScreen() {
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionTitle}>Replicaciones</Text>
+            <Text style={styles.sectionTitle}>Creaciones</Text>
             {replicationsLoading ? (
               <ActivityIndicator size="small" color={Colors.greenAccent} />
             ) : replications.length === 0 ? (
@@ -368,8 +368,8 @@ export default function RecipeDetailScreen() {
 
       <ConfirmDialog
         visible={!!deletingReplication}
-        title="Eliminar replicación"
-        message="¿Estás seguro de que quieres eliminar esta replicación?"
+        title="Eliminar creación"
+        message="¿Estás seguro de que quieres eliminar esta creación?"
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
         destructive

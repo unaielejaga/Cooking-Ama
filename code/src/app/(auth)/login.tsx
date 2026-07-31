@@ -20,7 +20,7 @@ const FEATURES = [
   },
   {
     icon: 'content-copy' as const,
-    title: 'Replicar recetas',
+    title: 'Crea tus versiones',
     description: 'Guarda y adapta recetas a tu gusto',
   },
 ];

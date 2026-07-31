@@ -31,7 +31,7 @@ const SORT_OPTIONS: { label: string; value: SearchFilters['sortBy'] }[] = [
   { label: 'Más recientes', value: 'newest' },
   { label: 'Más antiguos', value: 'oldest' },
   { label: 'Mejor valorados', value: 'rating' },
-  { label: 'Más replicados', value: 'replications' },
+  { label: 'Más creaciones', value: 'replications' },
 ];
 
 const MAX_TIME = 240;
